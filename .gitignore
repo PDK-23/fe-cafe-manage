@@ -1,0 +1,59 @@
+# Environment files and local registry credentials
+.env
+.env.*
+*.env
+.envrc
+.npmrc
+.yarnrc.yml
+.netrc
+
+# Private keys and credentials
+secrets/
+credentials/
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+
+# Dependencies, build output and caches; keep package-lock.json
+node_modules/
+dist/
+dist-ssr/
+.vite/
+.cache/
+coverage/
+*.tsbuildinfo
+
+# Browser sessions, screenshots, traces and test reports may contain user data
+test-results/
+playwright-report/
+blob-report/
+playwright/.auth/
+.auth/
+storageState*.json
+storage-state*.json
+auth-state*.json
+
+# Runtime logs and local backups
+.logs/
+logs/
+*.log
+*.log.*
+*.pid
+backups/
+*.bak
+
+# Local IDE/editor and operating system files
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
