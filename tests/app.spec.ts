@@ -1,0 +1,90 @@
+import { test, expect, type Page } from '@playwright/test'
+async function login(page: Page, username = 'admin', password = 'Cafe@Admin2026') {
+  await page.goto('/dang-nhap')
+  await page.getByLabel('Tên đăng nhập').fill(username)
+  await page.getByLabel('Mật khẩu', { exact: true }).fill(password)
+  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Sơ đồ bàn' })).toBeVisible()
+}
+test('bán hàng: thêm món, ghi chú, chuyển/gộp bàn và thanh toán', async ({ page }) => {
+  await login(page)
+  await page.getByRole('button', { name: 'Bàn 14 Trống', exact: true }).click()
+  await page.getByPlaceholder('Tìm món bạn cần...').fill('Bạc xỉu')
+  await page.locator('.product-item').click()
+  await expect(page.locator('.order-line')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Tăng Bạc xỉu' }).click()
+  await expect(page.locator('.summary-total strong')).toHaveText(/50\.000/)
+  await page.getByRole('button', { name: 'Thêm ghi chú', exact: true }).click()
+  await page.getByLabel('Yêu cầu của khách').fill('Ít đường, ít đá')
+  await page.getByRole('button', { name: 'Lưu ghi chú' }).click()
+  await expect(page.locator('.line-note')).toHaveText('Ít đường, ít đá')
+  await page.getByRole('button', { name: 'Bàn 15 Trống', exact: true }).click()
+  await page.locator('.product-item').click()
+  await expect(page.locator('.summary-total strong')).toHaveText(/25\.000/)
+  await page.getByRole('button', { name: 'Chuyển / Gộp bàn', exact: true }).click()
+  await page.locator('.move-table').filter({ hasText: 'Bàn 14' }).click()
+  await expect(page.getByText(/Tổng mới 75\.000/)).toBeVisible()
+  await page.getByRole('button', { name: 'Xác nhận gộp bàn' }).click()
+  await expect(page.locator('.summary-total strong')).toHaveText(/75\.000/)
+  await expect(page.locator('.quantity b')).toHaveText('3')
+  await page.getByRole('button', { name: 'Thanh toán', exact: true }).click()
+  await page.getByLabel('Tiền khách đưa (đ)').fill('100000')
+  await page.getByRole('button', { name: 'Xác nhận thanh toán' }).click()
+  await expect(page.locator('.receipt')).toContainText('ĐÃ THANH TOÁN')
+  await expect(page.locator('.receipt-total')).toContainText('75.000')
+  await expect(page.locator('.receipt-meta').filter({ hasText: 'Tiền thừa' })).toContainText(
+    '25.000',
+  )
+  await page.getByRole('button', { name: 'Đóng', exact: true }).last().click()
+  await expect(page.getByRole('button', { name: 'Bàn 14 Trống', exact: true })).toBeVisible()
+})
+test('khách hàng: thêm, sửa, tìm và xóa', async ({ page }) => {
+  await login(page)
+  await page.getByRole('link', { name: 'Khách hàng', exact: true }).click()
+  await page.getByRole('button', { name: 'Thêm khách hàng' }).click()
+  await page.getByLabel('Họ và tên').fill('Khách kiểm thử E2E')
+  await page.getByLabel('Số điện thoại', { exact: true }).fill('0909998877')
+  await page.getByLabel('Email', { exact: true }).fill('e2e@example.com')
+  await page.getByRole('button', { name: 'Lưu thay đổi' }).click()
+  await page.getByPlaceholder('Tìm tên, số điện thoại...').fill('0909998877')
+  const row = page.locator('tbody tr').filter({ hasText: 'Khách kiểm thử E2E' })
+  await expect(row).toHaveCount(1)
+  await row.getByRole('button', { name: /Sửa/ }).click()
+  await page.getByLabel('Họ và tên').fill('Khách đã chỉnh sửa')
+  await page.getByRole('button', { name: 'Lưu thay đổi' }).click()
+  const updated = page.locator('tbody tr').filter({ hasText: 'Khách đã chỉnh sửa' })
+  await updated.getByRole('button', { name: /Xóa/ }).click()
+  await page.getByRole('button', { name: 'Xóa dữ liệu' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.getByPlaceholder('Tìm tên, số điện thoại...').fill('0909998877')
+  await expect(page.getByText('Chưa có kết quả')).toBeVisible()
+})
+test('cashier: ẩn menu, chặn route và API quản trị', async ({ page, request }) => {
+  await login(page, 'cashier', 'Cafe@Cashier2026')
+  await expect(page.getByRole('link', { name: 'Nhân viên', exact: true })).toHaveCount(0)
+  await page.goto('/nhan-vien')
+  await expect(page.getByRole('heading', { name: 'Trang không khả dụng' })).toBeVisible()
+  const auth = await request.post('/api/auth/login', {
+    data: { username: 'cashier', password: 'Cafe@Cashier2026' },
+  })
+  const { token } = await auth.json()
+  const denied = await request.get('/api/auth/users', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  expect(denied.status()).toBe(403)
+  const allowed = await request.get('/api/catalog/products', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  expect(allowed.ok()).toBeTruthy()
+  const report = await request.get('/api/pos/reports', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  expect(report.status()).toBe(403)
+})
+test('giao diện mobile không tràn ngang', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy()
+  await page.getByRole('button', { name: 'VIP 1 Trống', exact: true }).click()
+  await expect(page.locator('.order-header h2')).toContainText('VIP 1')
+})
