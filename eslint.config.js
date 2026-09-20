@@ -12,7 +12,19 @@ export default tseslint.config(
     plugins: { 'react-hooks': hooks, 'react-refresh': refresh },
     rules: {
       ...hooks.configs.recommended.rules,
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      'react-refresh/only-export-components': [
+        'warn',
+        {
+          allowConstantExport: true,
+          allowExportNames: [
+            'buttonVariants',
+            'badgeVariants',
+            'tabsListVariants',
+            'toggleVariants',
+            'useSidebar',
+          ],
+        },
+      ],
     },
   },
 )

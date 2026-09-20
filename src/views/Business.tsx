@@ -1,3 +1,18 @@
+import { Input } from '@/components/ui/input'
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Alert } from '@/components/ui/alert'
+import { Textarea } from '@/components/ui/textarea'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -18,6 +33,9 @@ import { useDay, useAction } from '../viewmodels/data'
 import { useUI } from '../viewmodels/session'
 import { PageTitle, SearchBox, Loading, ErrorBox, Empty, Field, Modal } from '../components/ui'
 import { Receipt } from '../components/Receipt'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
+import { Progress } from '@/components/ui/progress'
 function DateFilter({
   from,
   to,
@@ -32,7 +50,7 @@ function DateFilter({
   return (
     <div className="date-filter">
       <CalendarDays size={17} />
-      <input
+      <Input
         aria-label="Từ ngày"
         type="date"
         value={from}
@@ -40,7 +58,7 @@ function DateFilter({
         onChange={(e) => setFrom(e.target.value)}
       />
       <span>→</span>
-      <input
+      <Input
         aria-label="Đến ngày"
         type="date"
         value={to}
@@ -96,18 +114,18 @@ export function Invoices() {
             onChange={setSearch}
             placeholder="Tìm mã hóa đơn, bàn, khách..."
           />
-          <select
+          <NativeSelect
             aria-label="Phương thức thanh toán"
             value={method}
             onChange={(e) => setMethod(e.target.value)}
           >
-            <option value="">Tất cả phương thức</option>
+            <NativeSelectOption value="">Tất cả phương thức</NativeSelectOption>
             {Object.entries(paymentNames).map(([k, v]) => (
-              <option key={k} value={k}>
+              <NativeSelectOption key={k} value={k}>
                 {v}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         {query.isPending ? (
           <Loading />
@@ -115,44 +133,46 @@ export function Invoices() {
           <ErrorBox error={query.error} />
         ) : rows.length ? (
           <div className="data-table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Mã hóa đơn</th>
-                  <th>Thời gian</th>
-                  <th>Bàn / Khách hàng</th>
-                  <th>Thanh toán</th>
-                  <th>Tổng tiền</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="data-table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Mã hóa đơn</TableHead>
+                  <TableHead>Thời gian</TableHead>
+                  <TableHead>Bàn / Khách hàng</TableHead>
+                  <TableHead>Thanh toán</TableHead>
+                  <TableHead>Tổng tiền</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map((o) => (
-                  <tr key={o.id}>
-                    <td>
+                  <TableRow key={o.id}>
+                    <TableCell>
                       <b className="text-teal">CF{String(o.id).padStart(6, '0')}</b>
-                    </td>
-                    <td>{dateTime(o.paidAt!)}</td>
-                    <td>
+                    </TableCell>
+                    <TableCell>{dateTime(o.paidAt!)}</TableCell>
+                    <TableCell>
                       <b>{o.tableName}</b>
                       <small className="block-muted">{o.customerName || 'Khách lẻ'}</small>
-                    </td>
-                    <td>
-                      <span className="badge gray">{paymentNames[o.paymentMethod]}</span>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="badge gray">
+                        {paymentNames[o.paymentMethod]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       <b>{money(o.total)}</b>
-                    </td>
-                    <td>
-                      <button className="button subtle" onClick={() => setReceipt(o)}>
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="secondary" onClick={() => setReceipt(o)}>
                         <Eye size={16} />
                         Chi tiết
-                      </button>
-                    </td>
-                  </tr>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         ) : (
           <Empty
@@ -177,7 +197,7 @@ function Metric({
   suffix?: string
 }) {
   return (
-    <div className="metric-card">
+    <Card className="metric-card">
       <span className="metric-icon">{icon}</span>
       <div>
         <small>{label}</small>
@@ -186,7 +206,7 @@ function Metric({
           {suffix && <span>{suffix}</span>}
         </h2>
       </div>
-    </div>
+    </Card>
   )
 }
 export function Reports() {
@@ -220,10 +240,10 @@ export function Reports() {
         description="Những con số nhỏ, giúp bạn đưa ra quyết định lớn."
       >
         <DateFilter {...{ from, to, setFrom, setTo }} />
-        <button className="button secondary" disabled={!report} onClick={exportCsv}>
+        <Button variant="outline" disabled={!report} onClick={exportCsv}>
           <Download size={17} />
           Xuất CSV
-        </button>
+        </Button>
       </PageTitle>
       {query.isPending ? (
         <Loading />
@@ -254,25 +274,45 @@ export function Reports() {
               <section className="panel chart-panel">
                 <div className="panel-title">
                   <h2>Doanh thu theo ngày</h2>
-                  <span className="badge green">VND</span>
+                  <Badge variant="secondary" className="badge green">
+                    VND
+                  </Badge>
                 </div>
                 {Object.keys(report.daily).length ? (
-                  <div className="bar-chart">
-                    {Object.entries(report.daily).map(([date, value]) => (
-                      <div className="bar-column" key={date}>
-                        <span>{money(value)}</span>
-                        <div className="bar-track">
-                          <div
-                            className="bar"
-                            style={{
-                              height: `${Math.max(2, (value / Math.max(1, ...Object.values(report.daily))) * 100)}%`,
-                            }}
-                          />
-                        </div>
-                        <small>{date.slice(5).split('-').reverse().join('/')}</small>
-                      </div>
-                    ))}
-                  </div>
+                  <ChartContainer
+                    className="h-72 w-full p-4"
+                    config={{ revenue: { label: 'Doanh thu', color: 'var(--primary)' } }}
+                  >
+                    <BarChart
+                      accessibilityLayer
+                      data={Object.entries(report.daily).map(([date, revenue]) => ({
+                        date,
+                        revenue,
+                      }))}
+                    >
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(date) => date.slice(5).split('-').reverse().join('/')}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        width={64}
+                        tickFormatter={(value) =>
+                          new Intl.NumberFormat('vi-VN', { notation: 'compact' }).format(value)
+                        }
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <ChartTooltip
+                        content={
+                          <ChartTooltipContent formatter={(value) => money(Number(value))} />
+                        }
+                      />
+                      <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ChartContainer>
                 ) : (
                   <Empty
                     title="Chưa có doanh thu"
@@ -291,13 +331,12 @@ export function Reports() {
                         <span>{v}</span>
                         <b>{money(report.payments[k] || 0)}</b>
                       </div>
-                      <div className="progress-track">
-                        <div
-                          style={{
-                            width: `${report.revenue ? ((report.payments[k] || 0) / report.revenue) * 100 : 0}%`,
-                          }}
-                        />
-                      </div>
+                      <Progress
+                        aria-label={v}
+                        value={
+                          report.revenue ? ((report.payments[k] || 0) / report.revenue) * 100 : 0
+                        }
+                      />
                       <small>
                         {report.revenue
                           ? Math.round(((report.payments[k] || 0) / report.revenue) * 100)
@@ -315,27 +354,27 @@ export function Reports() {
                 </div>
                 <p className="section-caption">Doanh số món trước giảm giá và phụ thu.</p>
                 {report.products.length ? (
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Tên món</th>
-                        <th>Số lượng</th>
-                        <th>Doanh số</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table className="data-table">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tên món</TableHead>
+                        <TableHead>Số lượng</TableHead>
+                        <TableHead>Doanh số</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {report.products.slice(0, 10).map((p, i) => (
-                        <tr key={p.name}>
-                          <td>
+                        <TableRow key={p.name}>
+                          <TableCell>
                             <span className="rank-number">{i + 1}</span>
                             <b>{p.name}</b>
-                          </td>
-                          <td>{p.quantity}</td>
-                          <td>{money(p.revenue)}</td>
-                        </tr>
+                          </TableCell>
+                          <TableCell>{p.quantity}</TableCell>
+                          <TableCell>{money(p.revenue)}</TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 ) : (
                   <Empty />
                 )}
@@ -345,26 +384,26 @@ export function Reports() {
                   <h2>Khách hàng nổi bật</h2>
                 </div>
                 {report.customers.length ? (
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Khách hàng</th>
-                        <th>Số đơn</th>
-                        <th>Chi tiêu</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table className="data-table">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Khách hàng</TableHead>
+                        <TableHead>Số đơn</TableHead>
+                        <TableHead>Chi tiêu</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {report.customers.slice(0, 10).map((p) => (
-                        <tr key={p.name}>
-                          <td>
+                        <TableRow key={p.name}>
+                          <TableCell>
                             <b>{p.name}</b>
-                          </td>
-                          <td>{p.quantity}</td>
-                          <td>{money(p.revenue)}</td>
-                        </tr>
+                          </TableCell>
+                          <TableCell>{p.quantity}</TableCell>
+                          <TableCell>{money(p.revenue)}</TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 ) : (
                   <Empty />
                 )}
@@ -394,10 +433,10 @@ export function Settlement() {
         title="Tất toán ngày"
         description="Đối soát rõ ràng, an tâm kết thúc một ngày làm việc."
       >
-        <span className={`badge ${closed ? 'gray' : 'green'}`}>
+        <Badge variant="secondary" className={`badge ${closed ? 'gray' : 'green'}`}>
           <span className="status-dot" />
           {closed ? 'Đã đóng ca' : 'Đang mở ca'} #{day.current.id}
-        </span>
+        </Badge>
       </PageTitle>
       <div className="metrics-grid three">
         <Metric icon={<Banknote />} label="Tổng doanh thu ca" value={money(day.sales)} />
@@ -434,7 +473,7 @@ export function Settlement() {
                 )
               }}
             >
-              <div className="success-box">
+              <Alert className="success-box">
                 <CheckCircle2 />
                 <h3>Ca đã được tất toán</h3>
                 <p>
@@ -444,9 +483,9 @@ export function Settlement() {
                   Chênh lệch:{' '}
                   {money((day.current.countedCash || 0) - (day.current.expectedCash || 0))}
                 </b>
-              </div>
+              </Alert>
               <Field label="Tiền mặt đầu ca mới (đ)">
-                <input
+                <Input
                   type="number"
                   min="0"
                   step="1"
@@ -455,10 +494,10 @@ export function Settlement() {
                   onChange={(e) => setOpening(Number(e.target.value))}
                 />
               </Field>
-              <button disabled={action.isPending} className="button primary">
+              <Button variant="default" disabled={action.isPending}>
                 <UnlockKeyhole size={17} />
                 Mở ca mới
-              </button>
+              </Button>
             </form>
           ) : (
             <form
@@ -485,7 +524,7 @@ export function Settlement() {
                 <strong>{money(day.expectedCash)}</strong>
               </div>
               <Field label="Tiền mặt thực đếm (đ)">
-                <input
+                <Input
                   type="number"
                   required
                   min="0"
@@ -496,17 +535,17 @@ export function Settlement() {
                 />
               </Field>
               {counted !== '' && (
-                <div
+                <Alert
                   className={`info-box ${Number(counted) !== day.expectedCash ? 'warning' : ''}`}
                 >
                   Chênh lệch: <b>{money(Number(counted) - day.expectedCash)}</b>
                   {Number(counted) === day.expectedCash
                     ? ' · Khớp số liệu'
                     : ' · Vui lòng kiểm tra và ghi chú'}
-                </div>
+                </Alert>
               )}
               <Field label="Ghi chú đối soát">
-                <textarea
+                <Textarea
                   value={note}
                   maxLength={250}
                   onChange={(e) => setNote(e.target.value)}
@@ -514,14 +553,14 @@ export function Settlement() {
                 />
               </Field>
               {day.openOrders > 0 && (
-                <div className="info-box warning">
+                <Alert className="info-box warning">
                   Còn {day.openOrders} bàn chưa thanh toán. Thanh toán hoặc hủy đơn để tất toán.
-                </div>
+                </Alert>
               )}
-              <button className="button primary" disabled={action.isPending || day.openOrders > 0}>
+              <Button variant="default" disabled={action.isPending || day.openOrders > 0}>
                 <LockKeyhole size={17} />
                 Xác nhận tất toán
-              </button>
+              </Button>
             </form>
           )}
         </section>
@@ -541,9 +580,9 @@ export function Settlement() {
                   <small>{d.closedAt ? `Đóng: ${dateTime(d.closedAt)}` : 'Đang phục vụ'}</small>
                   {d.note && <p>{d.note}</p>}
                 </div>
-                <span className={`badge ${d.closedAt ? 'gray' : 'green'}`}>
+                <Badge variant="secondary" className={`badge ${d.closedAt ? 'gray' : 'green'}`}>
                   {d.closedAt ? 'Đã đóng' : 'Đang mở'}
-                </span>
+                </Badge>
               </div>
             ))}
           </div>
@@ -557,8 +596,9 @@ export function Settlement() {
               chênh lệch <b>{money(Number(counted) - day.expectedCash)}</b>.
             </p>
             <p>Sau khi đóng, cần mở ca mới để tiếp tục bán hàng.</p>
-            <button
-              className="button primary"
+            <Button
+              variant="default"
+
               disabled={action.isPending}
               onClick={() =>
                 action.mutate(
@@ -573,7 +613,7 @@ export function Settlement() {
               }
             >
               Đóng ca
-            </button>
+            </Button>
           </div>
         </Modal>
       )}

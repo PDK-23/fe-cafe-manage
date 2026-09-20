@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { User } from '../models/types'
+import { toast } from 'sonner'
 interface Session {
   token: string | null
   user: User | null
@@ -20,15 +21,14 @@ export const useSession = create<Session>()(
 )
 interface UI {
   tableId: number | null
-  notice: { text: string; error: boolean } | null
   selectTable: (id: number) => void
   notify: (text: string, error?: boolean) => void
-  dismiss: () => void
 }
 export const useUI = create<UI>((set) => ({
   tableId: 8,
-  notice: null,
   selectTable: (tableId) => set({ tableId }),
-  notify: (text, error = false) => set({ notice: { text, error } }),
-  dismiss: () => set({ notice: null }),
+  notify: (text, error = false) => {
+    if (error) toast.error(text)
+    else toast.success(text)
+  },
 }))

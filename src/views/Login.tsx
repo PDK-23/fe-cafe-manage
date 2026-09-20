@@ -1,25 +1,30 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Navigate } from 'react-router-dom'
+import { ArrowRight, Coffee, Eye, EyeOff, ShieldCheck } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
-  ArrowRight,
-  Coffee,
-  Eye,
-  EyeOff,
-  Leaf,
-  ShieldCheck,
-  ChartNoAxesCombined,
-} from 'lucide-react'
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Spinner } from '@/components/ui/spinner'
 import { api } from '../models/api'
 import type { User } from '../models/types'
 import { useSession } from '../viewmodels/session'
 import { Field } from '../components/ui'
+
 export function Login() {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [show, setShow] = useState(false)
-  const session = useSession()
-  const client = useQueryClient()
+  const [username, setUsername] = useState(''),
+    [password, setPassword] = useState(''),
+    [show, setShow] = useState(false)
+  const session = useSession(),
+    client = useQueryClient()
   const login = useMutation({
     mutationFn: () =>
       api<{ token: string; user: User }>('/auth/login', 'POST', { username, password }),
@@ -29,62 +34,22 @@ export function Login() {
     },
   })
   if (session.token) return <Navigate to="/ban-hang" replace />
-  function submit(e: FormEvent) {
-    e.preventDefault()
+  function submit(event: FormEvent) {
+    event.preventDefault()
     login.mutate()
   }
   return (
-    <main className="login">
-      <section className="login-story">
-        <div className="brand">
-          <div className="brand-icon">
-            <Coffee size={27} />
-          </div>
-          <span>
-            cafe<span className="brand-light">flow.</span>
-          </span>
-        </div>
-        <div className="story-copy">
-          <span className="eyebrow">MỖI NGÀY, MỘT KHỞI ĐẦU TỐT</span>
-          <h1>
-            Chăm chút từng ly.
-            <br />
-            Quản lý thật nhẹ nhàng.
-          </h1>
-          <p>Một không gian làm việc gọn gàng để bạn dành nhiều thời gian hơn cho khách hàng.</p>
-          <div className="coffee-art">
-            <div className="steam s1" />
-            <div className="steam s2" />
-            <div className="steam s3" />
-            <div className="cup">
-              <Coffee size={58} strokeWidth={1} />
-            </div>
-            <div className="saucer" />
-            <span className="art-label">GOOD COFFEE. GREAT DAYS.</span>
-          </div>
-        </div>
-        <div className="login-features">
-          <span>
-            <Leaf size={18} /> Bán hàng dễ dàng
-          </span>
-          <span>
-            <ChartNoAxesCombined size={18} /> Số liệu rõ ràng
-          </span>
-          <span>
-            <ShieldCheck size={18} /> Phân quyền an toàn
-          </span>
-        </div>
-      </section>
-      <section className="login-form">
-        <div className="login-form-inner">
-          <span className="pill">KHÔNG GIAN QUẢN LÝ CỦA BẠN</span>
-          <h2>
-            Chào mừng trở lại <span>☕</span>
-          </h2>
-          <p>Đăng nhập để bắt đầu một ngày làm việc hiệu quả.</p>
-          <form onSubmit={submit}>
+    <main className="flex min-h-dvh items-center justify-center bg-muted/40 p-5">
+      <Card className="w-full max-w-md">
+        <CardHeader className="gap-3">
+          <Coffee className="size-9 text-primary" />
+          <CardTitle className="text-2xl">Cafe Flow</CardTitle>
+          <CardDescription>Đăng nhập vào hệ thống quản lý quán cà phê.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={submit} className="space-y-5">
             <Field label="Tên đăng nhập">
-              <input
+              <Input
                 autoComplete="username"
                 required
                 autoFocus
@@ -94,45 +59,45 @@ export function Login() {
               />
             </Field>
             <Field label="Mật khẩu">
-              <div className="password-wrap">
-                <input
+              <div className="relative">
+                <Input
                   autoComplete="current-password"
+                  className="pr-12"
                   required
                   type={show ? 'text' : 'password'}
                   placeholder="Nhập mật khẩu"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="absolute top-1 right-1"
                   aria-label={show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                   onClick={() => setShow(!show)}
                 >
-                  {show ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+                  {show ? <EyeOff /> : <Eye />}
+                </Button>
               </div>
             </Field>
             {login.error && (
-              <p role="alert" className="form-error">
-                {login.error.message}
-              </p>
+              <Alert variant="destructive">
+                <AlertDescription>{login.error.message}</AlertDescription>
+              </Alert>
             )}
-            <button disabled={login.isPending} className="button primary login-submit">
+            <Button disabled={login.isPending} className="w-full">
+              {login.isPending && <Spinner />}
               {login.isPending ? 'Đang đăng nhập...' : 'Đăng nhập'}
-              <ArrowRight size={18} />
-            </button>
+              <ArrowRight />
+            </Button>
           </form>
-          <div className="login-help">
-            <ShieldCheck size={18} />
-            <p>
-              Tài khoản được cấp bởi quản trị viên của quán.
-              <br />
-              Liên hệ quản lý nếu bạn cần hỗ trợ đăng nhập.
-            </p>
-          </div>
-        </div>
-        <small className="login-footer">Cafe Flow © 2026 · Làm việc nhẹ nhàng hơn mỗi ngày</small>
-      </section>
+        </CardContent>
+        <CardFooter className="gap-2 text-sm text-muted-foreground">
+          <ShieldCheck className="size-4 shrink-0" />
+          Tài khoản được cấp bởi quản trị viên của quán.
+        </CardFooter>
+      </Card>
     </main>
   )
 }

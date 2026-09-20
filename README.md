@@ -2,6 +2,12 @@
 
 React 19, Vite 7, TypeScript, Tailwind CSS, TanStack Query và Zustand. MVVM: `src/models`, `src/viewmodels`, `src/views`.
 
+Toàn bộ màn hình dùng [shadcn/ui](https://ui.shadcn.com/docs/installation/vite). Component chuẩn nằm trong `src/components/ui/`: Sidebar/Sheet, Dialog/AlertDialog, Button, Input/Textarea/NativeSelect, Checkbox/RadioGroup, Tabs/ToggleGroup, Table, Card, Badge, Avatar, Alert, Empty, Spinner, Tooltip, Progress và Chart. Thông báo dùng Sonner; biểu đồ dùng Chart của shadcn với Recharts.
+
+Cấu hình ở `components.json`, alias `@/` trỏ tới `src/`, màu và token giao diện ở `src/shadcn.css`. `src/components/ui.tsx` chỉ ghép các component chuẩn thành hộp thoại, trường nhập và trạng thái dùng chung. CSS riêng dành cho bố cục POS, trang nghiệp vụ và hóa đơn in. Sidebar giữ kiểu xanh đậm, icon phía trên và tên mục phía dưới. Khung làm việc vừa chiều cao màn hình; bảng, danh sách món và danh sách quyền cuộn bên trong, giữ tiêu đề và nút thao tác ở vị trí cố định. POS dưới 1200px chuyển giữa Bàn / Thực đơn / Đơn hàng, giữ nguyên đơn đang thao tác. Các nhóm màn hình được tải theo nhu cầu bằng `React.lazy`.
+
+Thêm component bằng `npx shadcn@latest add <tên-component>`. shadcn đưa mã component vào dự án, vì vậy thư mục `src/components/ui/` chứa mã thư viện để tái sử dụng và cập nhật; không viết lại các primitive này trong màn hình. Component dùng hàm `cn` từ `@/lib/utils` và icon Lucide.
+
 ```powershell
 npm ci
 npm run dev

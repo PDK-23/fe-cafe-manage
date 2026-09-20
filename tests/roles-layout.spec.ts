@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import type { Table } from '../src/models/types'
 
 async function login(page: Page, username = 'admin', password = 'Cafe@Admin2026') {
   await page.goto('/dang-nhap')
@@ -55,11 +56,11 @@ test('lưu quyền lỗi giữ lựa chọn để thử lại và chuyển vai t
   await login(page)
   await page.goto('/phan-quyen')
   await page.getByRole('checkbox', { name: 'Báo cáo doanh thu', exact: true }).check()
-  await page.getByRole('button', { name: /Quản lý Điều hành/ }).click()
+  await page.getByRole('radio', { name: /Quản lý Điều hành/ }).click()
   await expect(
     page.getByRole('heading', { name: 'Quản lý được sử dụng chức năng nào?' }),
   ).toBeVisible()
-  await page.getByRole('button', { name: /Thu ngân Nhân viên/ }).click()
+  await page.getByRole('radio', { name: /Thu ngân Nhân viên/ }).click()
   await expect(page.getByRole('checkbox', { name: 'Báo cáo doanh thu', exact: true })).toBeChecked()
   await page.route('**/api/permissions/roles/CASHIER', async (route) => {
     if (route.request().method() === 'PUT')
@@ -71,7 +72,9 @@ test('lưu quyền lỗi giữ lựa chọn để thử lại và chuyển vai t
     else await route.continue()
   })
   await page.getByRole('button', { name: 'Lưu phân quyền', exact: true }).click()
-  await expect(page.getByRole('alert')).toContainText('Không thể lưu quyền lúc này')
+  await expect(page.locator('[data-sonner-toast][data-type="error"]')).toContainText(
+    'Không thể lưu quyền lúc này',
+  )
   await expect(page.getByRole('checkbox', { name: 'Báo cáo doanh thu', exact: true })).toBeChecked()
   await expect(page.getByRole('button', { name: 'Lưu phân quyền', exact: true })).toBeEnabled()
   await page.getByRole('button', { name: 'Bỏ thay đổi' }).click()
@@ -82,10 +85,14 @@ test('POS rộng và dễ đọc ở desktop, tablet và mobile', async ({ page 
   for (const [width, height] of [
     [1440, 900],
     [1280, 800],
+    [1366, 768],
     [1024, 768],
     [390, 844],
   ]) {
     await page.setViewportSize({ width, height })
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight),
+    ).toBeTruthy()
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     ).toBeTruthy()
@@ -104,4 +111,75 @@ test('POS rộng và dễ đọc ở desktop, tablet và mobile', async ({ page 
   await expect(page.getByRole('checkbox', { name: 'Báo cáo doanh thu', exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy()
   await page.screenshot({ path: 'test-results/roles-mobile.png', fullPage: true })
+})
+
+test('danh sách nhiều món có đủ chiều cao và cuộn riêng khỏi thanh toán', async ({ page }) => {
+  // Use a long order fixture without changing any stored orders.
+  let tableName = ''
+  await page.route('**/api/pos/tables', async (route) => {
+    const response = await route.fetch()
+    const tables: Table[] = await response.json()
+    const table = tables.find((item) => item.order)!
+    tableName = table.name
+    const order = table.order!
+    order.items = Array.from({ length: 12 }, (_, index) => ({
+      productId: 1000 + index,
+      name: `Cà phê kiểm thử ${index + 1}`,
+      price: 25000,
+      quantity: 1,
+      note: index === 0 ? 'Ít đường, ít đá. '.repeat(8) : '',
+    }))
+    order.subtotal = 300000
+    order.total = 300000
+    await route.fulfill({ response, json: tables })
+  })
+  await login(page)
+  await page.getByRole('button', { name: `${tableName} Có khách`, exact: true }).click()
+  await expect(page.locator('.order-line')).toHaveCount(12)
+  await expect(page.locator('.customer-picker')).toHaveCSS('border-top-style', 'dashed')
+  await expect(page.locator('.table-card').filter({ hasText: tableName })).toHaveCSS(
+    'border-top-width',
+    '1px',
+  )
+  for (const [width, height] of [
+    [1440, 900],
+    [1280, 800],
+    [1366, 768],
+    [1024, 768],
+    [390, 844],
+  ]) {
+    await page.setViewportSize({ width, height })
+    if (width < 1200) await page.getByRole('radio', { name: /Đơn hàng/ }).click()
+    const viewport = page.locator('.order-items [data-slot="scroll-area-viewport"]')
+    const summary = page.locator('.order-summary')
+    const dimensions = await viewport.boundingBox()
+    expect(dimensions!.height).toBeGreaterThanOrEqual(240)
+    expect(await viewport.evaluate((el) => el.scrollHeight > el.clientHeight)).toBeTruthy()
+    const before = await summary.boundingBox()
+    await viewport.evaluate((el) => {
+      el.scrollTop = el.scrollHeight
+    })
+    await expect.poll(() => viewport.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
+    const last = await page.locator('.order-line').last().boundingBox()
+    const after = await summary.boundingBox()
+    expect(last!.y + last!.height).toBeLessThanOrEqual(dimensions!.y + dimensions!.height + 1)
+    expect(Math.abs(after!.y - before!.y)).toBeLessThan(1)
+    expect(after!.y).toBeGreaterThanOrEqual(dimensions!.y + dimensions!.height - 1)
+    const panel = await page.locator('.order-panel').boundingBox()
+    const checkout = page.getByRole('button', { name: 'Thanh toán', exact: true })
+    const button = await checkout.boundingBox()
+    expect(button!.y + button!.height).toBeLessThanOrEqual(panel!.y + panel!.height)
+    expect(button!.y + button!.height).toBeLessThanOrEqual(height)
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight),
+    ).toBeTruthy()
+    await expect(checkout).toHaveCSS('background-color', 'rgb(20, 117, 104)')
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    ).toBeTruthy()
+    await viewport.evaluate((el) => {
+      el.scrollTop = 0
+    })
+    await page.screenshot({ path: `test-results/order-scroll-${width}.png`, fullPage: true })
+  }
 })

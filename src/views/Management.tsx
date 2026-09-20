@@ -1,3 +1,32 @@
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
+import { DialogFooter } from '@/components/ui/dialog'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Alert } from '@/components/ui/alert'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog'
 import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, Pencil, Trash2, Search, Users, Coffee, ShieldCheck } from 'lucide-react'
@@ -34,45 +63,49 @@ function DataTable<T extends Row>({
 }) {
   return rows.length ? (
     <div className="data-table-wrap">
-      <table className="data-table">
-        <thead>
-          <tr>
+      <Table className="data-table">
+        <TableHeader>
+          <TableRow>
             {columns.map((c) => (
-              <th key={c.label}>{c.label}</th>
+              <TableHead key={c.label}>{c.label}</TableHead>
             ))}
-            <th className="align-right">Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
+            <TableHead className="align-right">Thao tác</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.map((row) => (
-            <tr key={row.id}>
+            <TableRow key={row.id}>
               {columns.map((c) => (
-                <td key={c.label}>{c.render(row)}</td>
+                <TableCell key={c.label}>{c.render(row)}</TableCell>
               ))}
-              <td>
+              <TableCell>
                 <div className="row-actions">
-                  <button
-                    className="icon-button"
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+
                     aria-label={`Sửa ${row.id}`}
                     onClick={() => onEdit(row)}
                   >
                     <Pencil size={16} />
-                  </button>
+                  </Button>
                   {onDelete && (
-                    <button
-                      className="icon-button text-danger"
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-danger"
                       aria-label={`Xóa ${row.id}`}
                       onClick={() => onDelete(row)}
                     >
                       <Trash2 size={16} />
-                    </button>
+                    </Button>
                   )}
                 </div>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   ) : (
     <Empty title="Chưa có kết quả" text="Thử từ khóa khác hoặc thêm dữ liệu mới." />
@@ -130,19 +163,19 @@ function Editor({
         {fields.map((f) => (
           <Field key={f.name} label={f.label}>
             {f.options ? (
-              <select
+              <NativeSelect
                 name={f.name}
                 defaultValue={String(initial[f.name] ?? '')}
                 required={f.required}
               >
                 {f.options.map((o) => (
-                  <option key={o.value} value={o.value}>
+                  <NativeSelectOption key={o.value} value={o.value}>
                     {o.label}
-                  </option>
+                  </NativeSelectOption>
                 ))}
-              </select>
+              </NativeSelect>
             ) : f.type === 'textarea' ? (
-              <textarea
+              <Textarea
                 name={f.name}
                 defaultValue={String(initial[f.name] ?? '')}
                 placeholder={f.placeholder}
@@ -150,11 +183,11 @@ function Editor({
               />
             ) : f.type === 'checkbox' ? (
               <span className="checkbox-label">
-                <input type="checkbox" name={f.name} defaultChecked={initial[f.name] !== false} />
+                <Checkbox name={f.name} defaultChecked={initial[f.name] !== false} />
                 Đang hoạt động
               </span>
             ) : (
-              <input
+              <Input
                 type={f.type || 'text'}
                 name={f.name}
                 defaultValue={String(initial[f.name] ?? '')}
@@ -170,14 +203,14 @@ function Editor({
             )}
           </Field>
         ))}
-        <footer className="modal-actions">
-          <button type="button" className="button secondary" onClick={onClose}>
+        <DialogFooter className="modal-actions">
+          <Button variant="outline" type="button" onClick={onClose}>
             Hủy bỏ
-          </button>
-          <button disabled={action.isPending} className="button primary">
+          </Button>
+          <Button variant="default" disabled={action.isPending}>
             {action.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
-          </button>
-        </footer>
+          </Button>
+        </DialogFooter>
       </form>
     </Modal>
   )
@@ -194,19 +227,27 @@ function DeleteConfirm({
   const action = useAction(),
     notify = useUI((s) => s.notify)
   return (
-    <Modal title="Xác nhận xóa" onClose={onClose}>
-      <div className="modal-form">
-        <p>
-          Xóa <b>{name}</b> khỏi danh sách? Thao tác này không thể hoàn tác.
-        </p>
-        <footer className="modal-actions">
-          <button className="button secondary" onClick={onClose}>
-            Giữ lại
-          </button>
-          <button
-            className="button danger"
+    <AlertDialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+          <AlertDialogDescription>
+            Xóa <b>{name}</b> khỏi danh sách? Thao tác này không thể hoàn tác.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={action.isPending}>Giữ lại</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+
             disabled={action.isPending}
-            onClick={() =>
+            onClick={(event) => {
+              event.preventDefault()
               action.mutate(
                 { path, method: 'DELETE' },
                 {
@@ -216,13 +257,13 @@ function DeleteConfirm({
                   },
                 },
               )
-            }
+            }}
           >
             Xóa dữ liệu
-          </button>
-        </footer>
-      </div>
-    </Modal>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 const record = (item: object) => item as Record<string, unknown>
@@ -260,13 +301,13 @@ export function Catalog() {
         title="Thực đơn"
         description="Một thực đơn được chăm chút, một trải nghiệm trọn vẹn."
       >
-        <button className="button primary" onClick={() => setEdit(false)}>
+        <Button variant="default" onClick={() => setEdit(false)}>
           <Plus size={18} />
           {categoryMode ? 'Thêm danh mục' : 'Thêm món mới'}
-        </button>
+        </Button>
       </PageTitle>
       <div className="metrics-grid three">
-        <div className="metric-card">
+        <Card className="metric-card">
           <span className="metric-icon">
             <Coffee />
           </span>
@@ -277,8 +318,8 @@ export function Catalog() {
               <span>món</span>
             </h2>
           </div>
-        </div>
-        <div className="metric-card">
+        </Card>
+        <Card className="metric-card">
           <span className="metric-icon amber">
             <Coffee />
           </span>
@@ -289,8 +330,8 @@ export function Catalog() {
               <span>món</span>
             </h2>
           </div>
-        </div>
-        <div className="metric-card">
+        </Card>
+        <Card className="metric-card">
           <span className="metric-icon blue">
             <Search />
           </span>
@@ -301,101 +342,97 @@ export function Catalog() {
               <span>nhóm món</span>
             </h2>
           </div>
-        </div>
+        </Card>
       </div>
-      <section className="panel">
+      <Tabs
+        className="panel"
+        value={tab}
+        onValueChange={(value) => {
+          setTab(value)
+          setSearch('')
+        }}
+      >
         <div className="list-toolbar">
-          <div className="segmented">
-            <button
-              className={!categoryMode ? 'selected' : ''}
-              onClick={() => {
-                setTab('products')
-                setSearch('')
-              }}
-            >
-              Danh sách món
-            </button>
-            <button
-              className={categoryMode ? 'selected' : ''}
-              onClick={() => {
-                setTab('categories')
-                setSearch('')
-              }}
-            >
-              Danh mục
-            </button>
-          </div>
+          <TabsList>
+            <TabsTrigger value="products">Danh sách món</TabsTrigger>
+            <TabsTrigger value="categories">Danh mục</TabsTrigger>
+          </TabsList>
           <SearchBox
             value={search}
             onChange={setSearch}
             placeholder={categoryMode ? 'Tìm danh mục...' : 'Tìm tên món...'}
           />
           {!categoryMode && (
-            <select
+            <NativeSelect
               aria-label="Lọc danh mục"
               value={category}
               onChange={(e) => setCategory(Number(e.target.value))}
             >
-              <option value={0}>Tất cả danh mục</option>
+              <NativeSelectOption value={0}>Tất cả danh mục</NativeSelectOption>
               {categories.data?.map((c) => (
-                <option key={c.id} value={c.id}>
+                <NativeSelectOption key={c.id} value={c.id}>
                   {c.name}
-                </option>
+                </NativeSelectOption>
               ))}
-            </select>
+            </NativeSelect>
           )}
         </div>
-        {categoryMode ? (
-          <DataTable
-            rows={(categories.data || []).filter((c) => matches(c.name, search))}
-            columns={[
-              { label: 'Mã', render: (c) => `DM${String(c.id).padStart(3, '0')}` },
-              { label: 'Tên danh mục', render: (c) => <b>{c.name}</b> },
-              {
-                label: 'Số món',
-                render: (c) => products.data?.filter((p) => p.categoryId === c.id).length || 0,
-              },
-            ]}
-            onEdit={setEdit}
-            onDelete={setRemove}
-          />
-        ) : (
-          <DataTable
-            rows={items}
-            columns={[
-              {
-                label: 'Tên món',
-                render: (p) => (
-                  <div className="name-cell">
-                    <span className={`product-art small art-${p.icon}`}>
-                      <Coffee size={20} />
-                    </span>
-                    <div>
-                      <b>{p.name}</b>
-                      <small>SP{String(p.id).padStart(3, '0')}</small>
+        <TabsContent value={tab}>
+          {categoryMode ? (
+            <DataTable
+              rows={(categories.data || []).filter((c) => matches(c.name, search))}
+              columns={[
+                { label: 'Mã', render: (c) => `DM${String(c.id).padStart(3, '0')}` },
+                { label: 'Tên danh mục', render: (c) => <b>{c.name}</b> },
+                {
+                  label: 'Số món',
+                  render: (c) => products.data?.filter((p) => p.categoryId === c.id).length || 0,
+                },
+              ]}
+              onEdit={setEdit}
+              onDelete={setRemove}
+            />
+          ) : (
+            <DataTable
+              rows={items}
+              columns={[
+                {
+                  label: 'Tên món',
+                  render: (p) => (
+                    <div className="name-cell">
+                      <span className={`product-art small art-${p.icon}`}>
+                        <Coffee size={20} />
+                      </span>
+                      <div>
+                        <b>{p.name}</b>
+                        <small>SP{String(p.id).padStart(3, '0')}</small>
+                      </div>
                     </div>
-                  </div>
-                ),
-              },
-              {
-                label: 'Danh mục',
-                render: (p) => categories.data?.find((c) => c.id === p.categoryId)?.name || '—',
-              },
-              { label: 'Giá bán', render: (p) => <b>{money(p.price)}</b> },
-              {
-                label: 'Trạng thái',
-                render: (p) => (
-                  <span className={`badge ${p.available ? 'green' : 'gray'}`}>
-                    {p.available ? 'Đang bán' : 'Ngừng bán'}
-                  </span>
-                ),
-              },
-            ]}
-            onEdit={setEdit}
-            onDelete={setRemove}
-          />
-        )}
-      </section>
+                  ),
+                },
+                {
+                  label: 'Danh mục',
+                  render: (p) => categories.data?.find((c) => c.id === p.categoryId)?.name || '—',
+                },
+                { label: 'Giá bán', render: (p) => <b>{money(p.price)}</b> },
+                {
+                  label: 'Trạng thái',
+                  render: (p) => (
+                    <Badge
+                      variant="secondary"
+                      className={`badge ${p.available ? 'green' : 'gray'}`}
+                    >
+                      {p.available ? 'Đang bán' : 'Ngừng bán'}
+                    </Badge>
+                  ),
+                },
+              ]}
+              onEdit={setEdit}
+              onDelete={setRemove}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
       {edit !== null && (
         <Editor
           title={`${edit ? 'Chỉnh sửa' : 'Thêm'} ${categoryMode ? 'danh mục' : 'món'}`}
@@ -458,10 +495,10 @@ export function Customers() {
         title="Khách hàng"
         description="Ghi nhớ từng vị khách, xây dựng những kết nối lâu dài."
       >
-        <button className="button primary" onClick={() => setEdit(false)}>
+        <Button variant="default" onClick={() => setEdit(false)}>
           <Plus size={18} />
           Thêm khách hàng
-        </button>
+        </Button>
       </PageTitle>
       <section className="panel">
         <div className="list-toolbar">
@@ -478,7 +515,9 @@ export function Customers() {
               label: 'Khách hàng',
               render: (c) => (
                 <div className="name-cell">
-                  <span className="initial-avatar">{c.name.charAt(0)}</span>
+                  <Avatar>
+                    <AvatarFallback>{c.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
                   <div>
                     <b>{c.name}</b>
                     <small>KH{String(c.id).padStart(4, '0')}</small>
@@ -552,10 +591,10 @@ export function Employees() {
         title="Nhân viên"
         description="Quản lý đội ngũ và quyền truy cập của từng tài khoản."
       >
-        <button className="button primary" onClick={() => setEdit(false)}>
+        <Button variant="default" onClick={() => setEdit(false)}>
           <Plus size={18} />
           Thêm nhân viên
-        </button>
+        </Button>
       </PageTitle>
       <section className="panel">
         <div className="list-toolbar">
@@ -571,7 +610,9 @@ export function Employees() {
               label: 'Nhân viên',
               render: (u) => (
                 <div className="name-cell">
-                  <span className="initial-avatar">{u.name.charAt(0)}</span>
+                  <Avatar>
+                    <AvatarFallback>{u.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
                   <b>{u.name}</b>
                 </div>
               ),
@@ -580,17 +621,17 @@ export function Employees() {
             {
               label: 'Vai trò',
               render: (u) => (
-                <span className="badge blue">
+                <Badge variant="secondary" className="badge blue">
                   {{ ADMIN: 'Quản trị viên', MANAGER: 'Quản lý', CASHIER: 'Thu ngân' }[u.role]}
-                </span>
+                </Badge>
               ),
             },
             {
               label: 'Trạng thái',
               render: (u) => (
-                <span className={`badge ${u.enabled ? 'green' : 'gray'}`}>
+                <Badge variant="secondary" className={`badge ${u.enabled ? 'green' : 'gray'}`}>
                   {u.enabled ? 'Hoạt động' : 'Đã khóa'}
-                </span>
+                </Badge>
               ),
             },
           ]}
@@ -668,99 +709,99 @@ export function Permissions() {
         description="Cấp quyền sử dụng từng chức năng cho Thu ngân và Quản lý."
       >
         {tab !== 'roles' && (
-          <button className="button primary" onClick={() => setAdd(true)}>
+          <Button variant="default" onClick={() => setAdd(true)}>
             <Plus size={18} />
             {tab === 'rules' ? 'Thêm quyền' : 'Thêm menu'}
-          </button>
+          </Button>
         )}
       </PageTitle>
-      <div className="info-box flex items-center gap-3">
+      <Alert className="info-box flex items-center gap-3">
         <ShieldCheck size={21} />
         <span>
           Chỉ Admin được cấp quyền. Nhân viên chỉ được sử dụng những chức năng đã được cho phép.
         </span>
-      </div>
-      <section className="panel mt-5">
+      </Alert>
+      <Tabs className="panel mt-5" value={tab} onValueChange={setTab}>
         <div className="list-toolbar">
-          <div className="segmented">
-            <button className={tab === 'roles' ? 'selected' : ''} onClick={() => setTab('roles')}>
-              Cấp quyền theo vai trò
-            </button>
-            <button className={tab === 'rules' ? 'selected' : ''} onClick={() => setTab('rules')}>
-              Quyền API nâng cao
-            </button>
-            <button className={tab === 'menus' ? 'selected' : ''} onClick={() => setTab('menus')}>
-              Menu & menu con
-            </button>
-          </div>
+          <TabsList className="h-auto flex-wrap">
+            <TabsTrigger value="roles">Cấp quyền theo vai trò</TabsTrigger>
+            <TabsTrigger value="rules">Quyền API nâng cao</TabsTrigger>
+            <TabsTrigger value="menus">Menu & menu con</TabsTrigger>
+          </TabsList>
         </div>
-        <div hidden={tab !== 'roles'}>
+        <TabsContent value="roles" forceMount className="data-[state=inactive]:hidden">
           <RolePermissions />
-        </div>
-        {tab === 'roles' ? null : tab === 'rules' ? (
-          <div className="data-table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Vai trò</th>
-                  <th>Phương thức</th>
-                  <th>Đường dẫn API</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {rules.data?.map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <span className="badge blue">{r.role}</span>
-                    </td>
-                    <td>
-                      <code>{r.method}</code>
-                    </td>
-                    <td>
-                      <code>{r.path}</code>
-                    </td>
-                    <td>
-                      <button
-                        aria-label={`Xóa quyền ${r.id}`}
-                        className="icon-button text-danger"
-                        onClick={() =>
-                          setRemove({
-                            path: `/permissions/rules/${r.id}`,
-                            name: `${r.role} ${r.method} ${r.path}`,
-                          })
-                        }
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <DataTable
-            rows={menus.data || []}
-            columns={[
-              {
-                label: 'Menu',
-                render: (m) => (
-                  <b>
-                    {m.parentId ? '↳ ' : ''}
-                    {m.label}
-                  </b>
-                ),
-              },
-              { label: 'Đường dẫn', render: (m) => <code>{m.path}</code> },
-              { label: 'Vai trò', render: (m) => m.roles },
-              { label: 'Thứ tự', render: (m) => m.sortOrder },
-            ]}
-            onEdit={setEditMenu}
-            onDelete={(m) => setRemove({ path: `/permissions/menus/${m.id}`, name: m.label })}
-          />
-        )}
-      </section>
+        </TabsContent>
+        <TabsContent value={tab === 'roles' ? 'rules' : tab}>
+          {tab === 'roles' ? null : tab === 'rules' ? (
+            <div className="data-table-wrap">
+              <Table className="data-table">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Vai trò</TableHead>
+                    <TableHead>Phương thức</TableHead>
+                    <TableHead>Đường dẫn API</TableHead>
+                    <TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rules.data?.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <Badge variant="secondary" className="badge blue">
+                          {r.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <code>{r.method}</code>
+                      </TableCell>
+                      <TableCell>
+                        <code>{r.path}</code>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Xóa quyền ${r.id}`}
+                          className="text-danger"
+                          onClick={() =>
+                            setRemove({
+                              path: `/permissions/rules/${r.id}`,
+                              name: `${r.role} ${r.method} ${r.path}`,
+                            })
+                          }
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <DataTable
+              rows={menus.data || []}
+              columns={[
+                {
+                  label: 'Menu',
+                  render: (m) => (
+                    <b>
+                      {m.parentId ? '↳ ' : ''}
+                      {m.label}
+                    </b>
+                  ),
+                },
+                { label: 'Đường dẫn', render: (m) => <code>{m.path}</code> },
+                { label: 'Vai trò', render: (m) => m.roles },
+                { label: 'Thứ tự', render: (m) => m.sortOrder },
+              ]}
+              onEdit={setEditMenu}
+              onDelete={(m) => setRemove({ path: `/permissions/menus/${m.id}`, name: m.label })}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
       {add && tab === 'rules' && (
         <Editor
           title="Thêm quyền truy cập"

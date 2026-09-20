@@ -1,0 +1,69 @@
+/* shadcn tokens share the existing Cafe Flow palette. */
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  [data-slot] {
+    border-color: var(--border);
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--card);
+  --color-popover-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--foreground);
+  --color-muted: var(--muted-surface);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--primary);
+  --color-sidebar-primary-foreground: var(--primary-foreground);
+  --color-sidebar-accent: var(--accent);
+  --color-sidebar-accent-foreground: var(--foreground);
+  --color-sidebar-border: var(--border);
+  --color-sidebar-ring: var(--ring);
+  --color-chart-1: var(--primary);
+  --color-chart-2: #5275b4;
+  --color-chart-3: #cc923e;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #253c38;
+  --card: #ffffff;
+  --popover: #ffffff;
+  --popover-foreground: #253c38;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #253c38;
+  --primary: #147568;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f3;
+  --muted-surface: #f5f7f6;
+  --muted-foreground: #63776d;
+  --accent: #eaf4ef;
+  --destructive: #b93838;
+  --input: #dfe6e2;
+  --ring: #147568;
+  --radius: 0.5rem;
+  --border: #e2e8e5;
+  --teal: var(--primary);
+  --teal-dark: #105c52;
+  --muted: var(--muted-foreground);
+  --soft: var(--muted-surface);
+}

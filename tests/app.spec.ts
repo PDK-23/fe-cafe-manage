@@ -86,5 +86,6 @@ test('giao diện mobile không tràn ngang', async ({ page }) => {
   await login(page)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy()
   await page.getByRole('button', { name: 'VIP 1 Trống', exact: true }).click()
+  await page.getByRole('radio', { name: /Đơn hàng/ }).click()
   await expect(page.locator('.order-header h2')).toContainText('VIP 1')
 })

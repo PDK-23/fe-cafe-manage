@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect, type CSSProperties, type ReactNode } from 'react'
 import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -11,18 +11,45 @@ import {
   UserRoundCog,
   ShieldCheck,
   LogOut,
-  ChevronRight,
-  Leaf,
   PanelLeft,
   type LucideIcon,
 } from 'lucide-react'
 import { useSession } from './viewmodels/session'
 import { useMenus } from './viewmodels/data'
-import { Toast, Loading, ErrorBox } from './components/ui'
+import type { Menu } from './models/types'
+import { Loading, ErrorBox, Empty } from './components/ui'
+import { Button } from './components/ui/button'
+import { Avatar, AvatarFallback } from './components/ui/avatar'
+import { Separator } from './components/ui/separator'
+import { Toaster } from './components/ui/sonner'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from './components/ui/sidebar'
 import { Login } from './views/Login'
-import { Pos } from './views/Pos'
-import { Catalog, Customers, Employees, Permissions } from './views/Management'
-import { Invoices, Reports, Settlement } from './views/Business'
+const Pos = lazy(() => import('./views/Pos').then((m) => ({ default: m.Pos })))
+const Catalog = lazy(() => import('./views/Management').then((m) => ({ default: m.Catalog })))
+const Customers = lazy(() => import('./views/Management').then((m) => ({ default: m.Customers })))
+const Employees = lazy(() => import('./views/Management').then((m) => ({ default: m.Employees })))
+const Permissions = lazy(() =>
+  import('./views/Management').then((m) => ({ default: m.Permissions })),
+)
+const Invoices = lazy(() => import('./views/Business').then((m) => ({ default: m.Invoices })))
+const Reports = lazy(() => import('./views/Business').then((m) => ({ default: m.Reports })))
+const Settlement = lazy(() => import('./views/Business').then((m) => ({ default: m.Settlement })))
+
 const icons: Record<string, LucideIcon> = {
   layout: LayoutGrid,
   coffee: Coffee,
@@ -33,7 +60,7 @@ const icons: Record<string, LucideIcon> = {
   staff: UserRoundCog,
   shield: ShieldCheck,
 }
-const pages: Record<string, React.ReactNode> = {
+const pages: Record<string, ReactNode> = {
   '/ban-hang': <Pos />,
   '/thuc-don': <Catalog />,
   '/khach-hang': <Customers />,
@@ -43,6 +70,77 @@ const pages: Record<string, React.ReactNode> = {
   '/nhan-vien': <Employees />,
   '/phan-quyen': <Permissions />,
 }
+
+function Navigation({ menu, logout }: { menu: Menu[]; logout: () => void }) {
+  const { setOpenMobile } = useSidebar()
+  const { pathname } = useLocation()
+  return (
+    <Sidebar collapsible="offcanvas" className="classic-sidebar">
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" asChild className="classic-logo">
+              <NavLink to="/ban-hang" aria-label="Cafe Flow" onClick={() => setOpenMobile(false)}>
+                <Coffee />
+                <strong>flow.</strong>
+              </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <Separator />
+      <SidebarContent className="classic-navigation">
+        <SidebarMenu>
+          {menu
+            .filter((m) => !m.parentId || !menu.some((parent) => parent.id === m.parentId))
+            .map((m) => {
+              const Icon = icons[m.icon] || PanelLeft
+              const children = menu.filter((child) => child.parentId === m.id)
+              return (
+                <SidebarMenuItem key={m.id}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === m.path}
+                    tooltip={m.label}
+                    className="classic-nav-item"
+                  >
+                    <NavLink to={m.path} onClick={() => setOpenMobile(false)}>
+                      <Icon />
+                      <span>{m.label}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                  {!!children.length && (
+                    <SidebarMenuSub>
+                      {children.map((child) => (
+                        <SidebarMenuSubItem key={child.id}>
+                          <SidebarMenuSubButton asChild isActive={pathname === child.path}>
+                            <NavLink to={child.path} onClick={() => setOpenMobile(false)}>
+                              {child.label}
+                            </NavLink>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  )}
+                </SidebarMenuItem>
+              )
+            })}
+        </SidebarMenu>
+      </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={logout} tooltip="Đăng xuất" className="classic-nav-item">
+              <LogOut />
+              <span>Đăng xuất</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
+  )
+}
+
 function Workspace() {
   const { user, logout } = useSession()
   const menus = useMenus()
@@ -51,8 +149,8 @@ function Workspace() {
   const visibleMenus = (menus.data || []).filter(
     (m) => user?.role === 'ADMIN' || !['/phan-quyen', '/nhan-vien'].includes(m.path),
   )
-  // Admin must retain access to permission management even if a menu was removed.
-  if (user?.role === 'ADMIN' && !visibleMenus.some((m) => m.path === '/phan-quyen')) {
+  // Admin retains permission management even if its menu was removed.
+  if (user?.role === 'ADMIN' && !visibleMenus.some((m) => m.path === '/phan-quyen'))
     visibleMenus.push({
       id: -1,
       label: 'Phân quyền',
@@ -62,135 +160,75 @@ function Workspace() {
       parentId: null,
       sortOrder: 99,
     })
-  }
   const current = visibleMenus.find((m) => m.path === location.pathname)
+  const signOut = () => {
+    logout()
+    client.clear()
+  }
   useEffect(() => {
     document.title = `${current?.label || 'Quản lý'} · Cafe Flow`
   }, [current?.label])
   if (menus.isPending) return <Loading />
   if (menus.error)
     return (
-      <div className="boot-error">
+      <div className="space-y-4 p-6">
         <ErrorBox error={menus.error} retry={() => menus.refetch()} />
-        <button
-          className="button secondary"
-          onClick={() => {
-            logout()
-            client.clear()
-          }}
-        >
+        <Button variant="outline" onClick={signOut}>
           Đăng xuất
-        </button>
+        </Button>
       </div>
     )
-  const menu = visibleMenus
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <NavLink className="sidebar-logo" aria-label="Cafe Flow" to="/ban-hang">
-          <Coffee size={28} />
-          <span>flow.</span>
-        </NavLink>
-        <nav>
-          {menu
-            .filter((m) => !m.parentId || !menu.some((parent) => parent.id === m.parentId))
-            .map((m) => {
-              const Icon = icons[m.icon] || PanelLeft
-              return (
-                <div key={m.id}>
-                  <NavLink
-                    to={m.path}
-                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                    title={m.label}
-                  >
-                    <Icon size={22} />
-                    <span>{m.label}</span>
-                  </NavLink>
-                  {menu
-                    .filter((child) => child.parentId === m.id)
-                    .map((child) => (
-                      <NavLink key={child.id} to={child.path} className="nav-item sub-nav">
-                        {child.label}
-                      </NavLink>
-                    ))}
-                </div>
-              )
-            })}
-        </nav>
-        <button
-          className="nav-item logout"
-          onClick={() => {
-            logout()
-            client.clear()
-          }}
-          title="Đăng xuất"
-        >
-          <LogOut size={21} />
-          <span>Đăng xuất</span>
-        </button>
-      </aside>
-      <div className="workspace">
-        <header className="topbar">
-          <div className="breadcrumb">
-            <span className="shop-icon">
-              <Leaf size={19} />
-            </span>
-            <strong>Cafe Flow</strong>
-            <span className="branch">Chi nhánh trung tâm</span>
-            <ChevronRight size={15} />
-            <span>{current?.label || 'Trang không tồn tại'}</span>
+    <SidebarProvider className="app-shell" style={{ '--sidebar-width': '104px' } as CSSProperties}>
+      <Navigation menu={visibleMenus} logout={signOut} />
+      <SidebarInset className="workspace-frame min-w-0 bg-muted/30">
+        <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b bg-background px-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <SidebarTrigger aria-label="Mở/thu gọn menu" />
+            <Separator orientation="vertical" className="h-5" />
+            <span className="truncate font-medium">{current?.label || 'Trang không tồn tại'}</span>
           </div>
-          <div className="topbar-right">
-            <span className="today">
-              {new Intl.DateTimeFormat('vi-VN', {
-                weekday: 'long',
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-              }).format(new Date())}
-            </span>
-            <div className="user-avatar">{user?.name.charAt(0)}</div>
-            <div className="user-label">
+          <div className="flex shrink-0 items-center gap-2">
+            <Avatar>
+              <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div className="hidden text-sm sm:block">
               <b>{user?.name}</b>
-              <small>
+              <p className="text-muted-foreground">
                 {
                   { ADMIN: 'Quản trị viên', MANAGER: 'Quản lý', CASHIER: 'Thu ngân' }[
                     user?.role || 'CASHIER'
                   ]
                 }
-              </small>
+              </p>
             </div>
           </div>
         </header>
-        <main className={location.pathname === '/ban-hang' ? 'pos-main' : 'page-main'}>
-          {current ? (
-            pages[location.pathname] || (
-              <div className="empty">
-                <h2>Menu chưa có màn hình</h2>
-                <p>Hãy cấu hình đường dẫn trỏ đến màn hình có sẵn.</p>
+        <div className={location.pathname === '/ban-hang' ? 'pos-main' : 'page-main'}>
+          <Suspense fallback={<Loading />}>
+            {current ? (
+              pages[location.pathname] || (
+                <Empty
+                  title="Menu chưa có màn hình"
+                  text="Hãy cấu hình đường dẫn trỏ đến màn hình có sẵn."
+                />
+              )
+            ) : (
+              <div className="space-y-4 p-8">
+                <h2>Trang không khả dụng</h2>
+                <p>Bạn không có quyền truy cập hoặc đường dẫn không tồn tại.</p>
+                <Button asChild>
+                  <NavLink to={visibleMenus[0]?.path || '/dang-nhap'}>Về trang chính</NavLink>
+                </Button>
               </div>
-            )
-          ) : (
-            <div className="empty">
-              <ShieldCheck size={35} />
-              <h2>Trang không khả dụng</h2>
-              <p>Bạn không có quyền truy cập hoặc đường dẫn không tồn tại.</p>
-              <NavLink className="button primary" to={menu[0]?.path || '/dang-nhap'}>
-                Về trang chính
-              </NavLink>
-            </div>
-          )}
-        </main>
-        <footer className="app-footer">
-          <span>
-            <span className="status-dot" /> Cafe Flow · Không gian quản lý của bạn
-          </span>
-          <span>Chăm chút từng ly, trọn vẹn từng trải nghiệm.</span>
-        </footer>
-      </div>
-    </div>
+            )}
+          </Suspense>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
+
 export default function App() {
   const token = useSession((s) => s.token)
   return (
@@ -200,7 +238,14 @@ export default function App() {
         <Route path="/" element={<Navigate to={token ? '/ban-hang' : '/dang-nhap'} replace />} />
         <Route path="/*" element={token ? <Workspace /> : <Navigate to="/dang-nhap" replace />} />
       </Routes>
-      <Toast />
+      <Toaster
+        richColors
+        closeButton
+        position="top-center"
+        offset={8}
+        mobileOffset={8}
+        duration={5000}
+      />
     </>
   )
 }

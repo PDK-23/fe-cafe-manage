@@ -1,7 +1,10 @@
+import { DialogFooter } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import type { Order } from '../models/types'
 import { dateTime, money, paymentNames } from '../models/api'
 import { Modal } from './ui'
 import { Printer, CheckCircle2 } from 'lucide-react'
+import { Separator } from './ui/separator'
 export function Receipt({ order, onClose }: { order: Order; onClose: () => void }) {
   return (
     <Modal title="Hóa đơn thanh toán" onClose={onClose}>
@@ -10,7 +13,7 @@ export function Receipt({ order, onClose }: { order: Order; onClose: () => void 
           cafe<span>flow.</span>
         </div>
         <p>Cảm ơn bạn đã ghé quán!</p>
-        <div className="receipt-divider" />
+        <Separator className="my-4" />
         <h3>HÓA ĐƠN BÁN HÀNG</h3>
         <p>
           CF{String(order.id).padStart(6, '0')} · {order.tableName}
@@ -24,7 +27,7 @@ export function Receipt({ order, onClose }: { order: Order; onClose: () => void 
           <span>Thu ngân</span>
           <b>{order.cashier}</b>
         </div>
-        <div className="receipt-divider" />
+        <Separator className="my-4" />
         {order.items.map((l, i) => (
           <div className="receipt-line" key={i}>
             <div>
@@ -36,7 +39,7 @@ export function Receipt({ order, onClose }: { order: Order; onClose: () => void 
             <strong>{money(l.quantity * l.price)}</strong>
           </div>
         ))}
-        <div className="receipt-divider" />
+        <Separator className="my-4" />
         <div className="receipt-meta">
           <span>Tiền hàng</span>
           <span>{money(order.subtotal)}</span>
@@ -66,15 +69,15 @@ export function Receipt({ order, onClose }: { order: Order; onClose: () => void 
           <CheckCircle2 size={16} /> ĐÃ THANH TOÁN
         </div>
       </div>
-      <footer className="modal-actions">
-        <button className="button secondary" onClick={onClose}>
+      <DialogFooter className="modal-actions">
+        <Button variant="outline" onClick={onClose}>
           Đóng
-        </button>
-        <button className="button primary" onClick={() => window.print()}>
+        </Button>
+        <Button variant="default" onClick={() => window.print()}>
           <Printer size={17} />
           In hóa đơn
-        </button>
-      </footer>
+        </Button>
+      </DialogFooter>
     </Modal>
   )
 }

@@ -1,6 +1,20 @@
-import { useEffect, useRef, type ReactNode } from 'react'
-import { X, Search, LoaderCircle, AlertCircle, Check, Inbox } from 'lucide-react'
-import { useUI } from '../viewmodels/session'
+import type { ReactNode } from 'react'
+import { X, Search, AlertCircle, Inbox } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
+import { Alert, AlertDescription } from './ui/alert'
+import {
+  Empty as EmptyState,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from './ui/empty'
+import { Spinner } from './ui/spinner'
+
 export function Modal({
   title,
   children,
@@ -12,60 +26,61 @@ export function Modal({
   onClose: () => void
   wide?: boolean
 }) {
-  const ref = useRef<HTMLDialogElement>(null)
-  useEffect(() => {
-    ref.current?.showModal()
-    const dialog = ref.current
-    return () => dialog?.close()
-  }, [])
   return (
-    <dialog
-      ref={ref}
-      className={`modal ${wide ? 'wide' : ''}`}
-      onCancel={onClose}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
       }}
     >
-      <header>
-        <div>
-          <span className="eyebrow">CAFE FLOW</span>
-          <h2>{title}</h2>
-        </div>
-        <button className="icon-button" aria-label="Đóng" onClick={onClose}>
-          <X size={20} />
-        </button>
-      </header>
-      {children}
-    </dialog>
+      <DialogContent
+        aria-describedby={undefined}
+        className={cn('app-dialog max-h-[90dvh] overflow-y-auto', wide && 'sm:max-w-3xl')}
+      >
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
   )
 }
+
 export function SearchBox({
   value,
   onChange,
   placeholder = 'Tìm kiếm...',
 }: {
   value: string
-  onChange: (s: string) => void
+  onChange: (value: string) => void
   placeholder?: string
 }) {
   return (
-    <div className="search">
-      <Search size={17} />
-      <input
+    <div className="search relative min-w-0">
+      <Search className="pointer-events-none absolute top-3 left-3 size-4 text-muted-foreground" />
+      <Input
+        className="pr-10 pl-9"
         aria-label={placeholder}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
       {value && (
-        <button aria-label="Xóa tìm kiếm" onClick={() => onChange('')}>
-          <X size={14} />
-        </button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="absolute top-1 right-1"
+          aria-label="Xóa tìm kiếm"
+          onClick={() => onChange('')}
+        >
+          <X />
+        </Button>
       )}
     </div>
   )
 }
+
 export function Empty({
   title = 'Chưa có dữ liệu',
   text = 'Dữ liệu sẽ hiển thị tại đây khi có phát sinh.',
@@ -74,60 +89,46 @@ export function Empty({
   text?: string
 }) {
   return (
-    <div className="empty">
-      <div className="empty-icon">
-        <Inbox size={29} />
-      </div>
-      <h3>{title}</h3>
-      <p>{text}</p>
-    </div>
+    <EmptyState>
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <Inbox />
+        </EmptyMedia>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription>{text}</EmptyDescription>
+      </EmptyHeader>
+    </EmptyState>
   )
 }
+
 export function Loading() {
   return (
-    <div className="empty">
-      <LoaderCircle className="spin" />
-      <p>Đang tải dữ liệu...</p>
+    <div
+      className="flex min-h-40 items-center justify-center gap-3 text-muted-foreground"
+      role="status"
+    >
+      <Spinner />
+      Đang tải dữ liệu...
     </div>
   )
 }
+
 export function ErrorBox({ error, retry }: { error: Error | null; retry?: () => void }) {
   return (
-    <div role="alert" className="error-box">
-      <AlertCircle size={22} />
-      <p>{error?.message || 'Không tải được dữ liệu'}</p>
-      {retry && (
-        <button className="button secondary" onClick={retry}>
-          Thử lại
-        </button>
-      )}
-    </div>
+    <Alert variant="destructive">
+      <AlertCircle />
+      <AlertDescription>
+        {error?.message || 'Không tải được dữ liệu'}
+        {retry && (
+          <Button variant="outline" onClick={retry}>
+            Thử lại
+          </Button>
+        )}
+      </AlertDescription>
+    </Alert>
   )
 }
-export function Toast() {
-  const notice = useUI((s) => s.notice)
-  const dismiss = useUI((s) => s.dismiss)
-  useEffect(() => {
-    if (notice) {
-      const timer = setTimeout(dismiss, 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [notice, dismiss])
-  return (
-    notice && (
-      <div
-        className={`toast ${notice.error ? 'toast-error' : ''}`}
-        role={notice.error ? 'alert' : 'status'}
-      >
-        {notice.error ? <AlertCircle size={20} /> : <Check size={20} />}
-        <span>{notice.text}</span>
-        <button aria-label="Đóng thông báo" onClick={dismiss}>
-          <X size={16} />
-        </button>
-      </div>
-    )
-  )
-}
+
 export function PageTitle({
   title,
   description,
@@ -140,19 +141,19 @@ export function PageTitle({
   return (
     <div className="page-title">
       <div>
-        <span className="eyebrow">QUẢN LÝ QUÁN CÀ PHÊ</span>
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
-      <div className="flex items-center gap-3">{children}</div>
+      <div className="flex flex-wrap items-center gap-3">{children}</div>
     </div>
   )
 }
+
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="field">
+    <Label className="field flex min-w-0 flex-col items-stretch gap-2">
       <span>{label}</span>
       {children}
-    </label>
+    </Label>
   )
 }

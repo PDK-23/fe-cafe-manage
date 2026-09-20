@@ -1,3 +1,6 @@
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import { Textarea } from '@/components/ui/textarea'
+import { Alert } from '@/components/ui/alert'
 import { useState, type FormEvent } from 'react'
 import {
   Coffee,
@@ -31,7 +34,15 @@ import type { Order, Table, Line } from '../models/types'
 import { money, matches, paymentNames, dateTime } from '../models/api'
 import { Modal, SearchBox, Loading, ErrorBox, Empty, Field } from '../components/ui'
 import { Receipt } from '../components/Receipt'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 export function Pos() {
+  const [compactView, setCompactView] = useState('tables')
   const tables = useTables(),
     products = useProducts(),
     categories = useCategories(),
@@ -100,7 +111,29 @@ export function Pos() {
           <span>Ca #{day.data?.current.id || '—'}</span>
         </div>
       </div>
-      <div className="pos-layout">
+      <ToggleGroup
+        type="single"
+        value={compactView}
+        onValueChange={(value) => {
+          if (value) setCompactView(value)
+        }}
+        className="pos-view-switch"
+        aria-label="Khu vực bán hàng"
+      >
+        <ToggleGroupItem value="tables">
+          <Grid2X2 />
+          Bàn
+        </ToggleGroupItem>
+        <ToggleGroupItem value="menu">
+          <Coffee />
+          Thực đơn
+        </ToggleGroupItem>
+        <ToggleGroupItem value="order">
+          <ReceiptText />
+          Đơn hàng ({order?.items.reduce((sum, line) => sum + line.quantity, 0) || 0})
+        </ToggleGroupItem>
+      </ToggleGroup>
+      <div className="pos-layout" data-compact-view={compactView}>
         <section className="panel tables-panel">
           <div className="panel-title">
             <h2>
@@ -109,30 +142,42 @@ export function Pos() {
             </h2>
             <span className="count-label">{all.length} bàn</span>
           </div>
-          <div className="status-tabs">
+          <ToggleGroup
+            type="single"
+            value={status}
+            onValueChange={(value) => {
+              if (value) setStatus(value)
+            }}
+            className="status-tabs"
+            aria-label="Trạng thái bàn"
+          >
             {[
               ['all', 'Tất cả', all.length],
               ['busy', 'Có khách', occupied],
               ['empty', 'Bàn trống', all.length - occupied],
             ].map(([id, label, count]) => (
-              <button
-                key={id}
-                onClick={() => setStatus(String(id))}
-                className={status === id ? 'selected' : ''}
-              >
+              <ToggleGroupItem value={String(id)} key={id}>
                 {label}
                 <span>{count}</span>
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
-          <div className="area-tabs">
+          </ToggleGroup>
+          <ToggleGroup
+            type="single"
+            value={area}
+            onValueChange={(value) => {
+              if (value) setArea(value)
+            }}
+            className="area-tabs"
+            aria-label="Khu vực bàn"
+          >
             {['Tất cả', 'Khu vực VIP', 'Sân vườn', 'Tầng trệt'].map((a) => (
-              <button key={a} onClick={() => setArea(a)} className={area === a ? 'selected' : ''}>
+              <ToggleGroupItem key={a} value={a}>
                 {a === 'Khu vực VIP' ? 'VIP' : a}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
-          <div className="tables-scroll">
+          </ToggleGroup>
+          <ScrollArea className="tables-scroll">
             {['Khu vực VIP', 'Sân vườn', 'Tầng trệt']
               .filter((a) => area === 'Tất cả' || a === area)
               .map((a) => {
@@ -150,10 +195,14 @@ export function Pos() {
                       </div>
                       <div className="table-grid">
                         {list.map((t) => (
-                          <button
+                          <Button
+                            variant="ghost"
                             key={t.id}
                             className={`table-card ${t.order ? 'occupied' : ''} ${t.id === tableId ? 'chosen' : ''}`}
-                            onClick={() => selectTable(t.id)}
+                            onClick={() => {
+                              selectTable(t.id)
+                              setCompactView('menu')
+                            }}
                             aria-label={`${t.name} ${t.order ? 'Có khách' : 'Trống'}`}
                             aria-pressed={t.id === tableId}
                           >
@@ -165,7 +214,7 @@ export function Pos() {
                             <Armchair size={27} strokeWidth={1.3} />
                             <strong>{t.name}</strong>
                             <span>{t.order ? money(t.order.total) : 'Trống'}</span>
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </div>
@@ -178,7 +227,7 @@ export function Pos() {
                 text="Thử thay đổi bộ lọc trạng thái hoặc khu vực."
               />
             )}
-          </div>
+          </ScrollArea>
           <div className="table-legend">
             <span>
               <i className="legend-dot free" />
@@ -204,25 +253,29 @@ export function Pos() {
           </div>
           <div className="menu-filters">
             <SearchBox value={search} onChange={setSearch} placeholder="Tìm món bạn cần..." />
-            <div className="category-strip">
-              <button className={category === 0 ? 'selected' : ''} onClick={() => setCategory(0)}>
-                Tất cả
-              </button>
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              value={String(category)}
+              onValueChange={(value) => {
+                if (value) setCategory(Number(value))
+              }}
+              className="category-strip"
+              aria-label="Danh mục món"
+            >
+              <ToggleGroupItem value="0">Tất cả</ToggleGroupItem>
               {categories.data?.map((c) => (
-                <button
-                  key={c.id}
-                  className={category === c.id ? 'selected' : ''}
-                  onClick={() => setCategory(c.id)}
-                >
+                <ToggleGroupItem value={String(c.id)} key={c.id}>
                   {c.name}
-                </button>
+                </ToggleGroupItem>
               ))}
-            </div>
+            </ToggleGroup>
           </div>
-          <div className="products-scroll">
+          <ScrollArea className="products-scroll">
             <div className="product-list">
               {items.map((p) => (
-                <button
+                <Button
+                  variant="ghost"
                   className="product-item"
                   key={p.id}
                   disabled={action.isPending || !!day.data?.current.closedAt}
@@ -251,7 +304,7 @@ export function Pos() {
                   <span className="add-product">
                     <Plus size={18} />
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
             {!items.length && (
@@ -260,7 +313,7 @@ export function Pos() {
                 text="Thử tên món khác hoặc chọn tất cả danh mục."
               />
             )}
-          </div>
+          </ScrollArea>
           <div className="menu-hint">
             <Plus size={14} />
             <span>Chọn món để thêm vào đơn của bàn</span>
@@ -272,7 +325,7 @@ export function Pos() {
               <span className="eyebrow">CHI TIẾT ĐƠN HÀNG</span>
               <h2>
                 {table?.name || 'Chọn một bàn'}
-                <span className="order-badge">{order ? 'Đang phục vụ' : 'Bàn trống'}</span>
+                <Badge variant="secondary">{order ? 'Đang phục vụ' : 'Bàn trống'}</Badge>
               </h2>
             </div>
             <ReceiptText size={25} strokeWidth={1.3} />
@@ -288,7 +341,8 @@ export function Pos() {
                 ` · ${new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`}
             </span>
           </div>
-          <button
+          <Button
+            variant="ghost"
             className="customer-picker"
             disabled={!order || action.isPending}
             onClick={() => setModal('adjust')}
@@ -303,8 +357,8 @@ export function Pos() {
               </small>
             </div>
             <ChevronRight size={17} />
-          </button>
-          <div className="order-items">
+          </Button>
+          <ScrollArea className="order-items" type="always" aria-label="Danh sách món đã chọn">
             <div className="order-columns">
               <span>Món đã chọn</span>
               <span>Số lượng</span>
@@ -319,39 +373,50 @@ export function Pos() {
                     <span className="line-number">{String(i + 1).padStart(2, '0')}</span>
                     <div>
                       <h3>{l.name}</h3>
-                      <button className="line-note" onClick={() => setLineEdit(l)}>
+                      <Button
+                        variant="ghost"
+                        className="line-note"
+                        title={l.note || 'Thêm ghi chú'}
+                        onClick={() => setLineEdit(l)}
+                      >
                         <NotebookPen size={11} />
-                        {l.note || 'Thêm ghi chú'}
-                      </button>
+                        <span>{l.note || 'Thêm ghi chú'}</span>
+                      </Button>
                     </div>
                   </div>
                   <div className="quantity">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       disabled={action.isPending}
                       aria-label={`Giảm ${l.name}`}
                       onClick={() => updateLine(l, l.quantity - 1)}
                     >
                       <Minus size={17} />
-                    </button>
+                    </Button>
                     <b>{l.quantity}</b>
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       disabled={action.isPending || l.quantity >= 999}
                       aria-label={`Tăng ${l.name}`}
                       onClick={() => updateLine(l, l.quantity + 1)}
                     >
                       <Plus size={17} />
-                    </button>
+                    </Button>
                   </div>
                   <span className="line-price">{money(l.price)}</span>
                   <strong className="line-total">{money(l.price * l.quantity)}</strong>
-                  <button
-                    className="icon-button remove-line"
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="remove-line"
                     aria-label={`Xóa ${l.name}`}
                     disabled={action.isPending}
                     onClick={() => updateLine(l, 0)}
                   >
                     <Trash2 size={17} />
-                  </button>
+                  </Button>
                 </div>
               ))
             ) : (
@@ -360,7 +425,7 @@ export function Pos() {
                 text="Chọn món từ thực đơn để bắt đầu phục vụ."
               />
             )}
-          </div>
+          </ScrollArea>
           <div className="order-summary">
             <div className="summary-row">
               <span>
@@ -370,7 +435,8 @@ export function Pos() {
               <b>{money(order?.subtotal || 0)}</b>
             </div>
             <div className="order-adjustments">
-              <button
+              <Button
+                variant="ghost"
                 className="summary-row summary-edit"
                 disabled={!order}
                 onClick={() => setModal('adjust')}
@@ -379,8 +445,9 @@ export function Pos() {
                   Giảm giá <Plus size={12} />
                 </span>
                 <b className="text-teal">−{money(order?.discount || 0)}</b>
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 className="summary-row summary-edit"
                 disabled={!order}
                 onClick={() => setModal('adjust')}
@@ -389,7 +456,7 @@ export function Pos() {
                   Phụ thu <Plus size={12} />
                 </span>
                 <b>{money(order?.surcharge || 0)}</b>
-              </button>
+              </Button>
             </div>
             {order?.note && <p className="order-note">{order.note}</p>}
             <div className="summary-total">
@@ -398,32 +465,33 @@ export function Pos() {
             </div>
             <div className="order-actions">
               <div className="order-tools">
-                <button
-                  className="button secondary"
+                <Button
+                  variant="outline"
                   disabled={!order || action.isPending}
                   onClick={() => setModal('move')}
                 >
                   <ArrowRightLeft size={15} />
                   Chuyển / Gộp bàn
-                </button>
-                <button
-                  className="button danger-light"
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:text-destructive"
                   disabled={!order || action.isPending}
                   onClick={() => setModal('cancel')}
                 >
                   <Trash2 size={15} />
                   Hủy đơn
-                </button>
+                </Button>
               </div>
-              <button
-                className="button primary checkout-button"
+              <Button
+                className="checkout-button"
                 disabled={!order?.items.length || action.isPending}
                 onClick={() => setModal('pay')}
               >
                 <Banknote size={21} />
                 <span>Thanh toán</span>
                 <ChevronRight size={19} />
-              </button>
+              </Button>
             </div>
           </div>
         </section>
@@ -486,18 +554,18 @@ export function Pos() {
             }}
           >
             <Field label="Khách hàng">
-              <select name="customerId" defaultValue={order.customerId || ''}>
-                <option value="">Khách lẻ</option>
+              <NativeSelect name="customerId" defaultValue={order.customerId || ''}>
+                <NativeSelectOption value="">Khách lẻ</NativeSelectOption>
                 {customers.data?.map((c) => (
-                  <option key={c.id} value={c.id}>
+                  <NativeSelectOption key={c.id} value={c.id}>
                     {c.name} · {c.phone}
-                  </option>
+                  </NativeSelectOption>
                 ))}
-              </select>
+              </NativeSelect>
             </Field>
             <div className="form-grid">
               <Field label="Giảm giá (đ)">
-                <input
+                <Input
                   name="discount"
                   type="number"
                   min="0"
@@ -508,7 +576,7 @@ export function Pos() {
                 />
               </Field>
               <Field label="Phụ thu (đ)">
-                <input
+                <Input
                   name="surcharge"
                   type="number"
                   min="0"
@@ -519,16 +587,16 @@ export function Pos() {
               </Field>
             </div>
             <Field label="Ghi chú đơn hàng">
-              <textarea
+              <Textarea
                 name="note"
                 maxLength={250}
                 defaultValue={order.note}
                 placeholder="Yêu cầu đặc biệt của khách..."
               />
             </Field>
-            <button className="button primary" disabled={action.isPending}>
+            <Button variant="default" disabled={action.isPending}>
               Lưu thông tin
-            </button>
+            </Button>
           </form>
         </Modal>
       )}
@@ -552,16 +620,16 @@ export function Pos() {
               Hủy đơn {table?.name}, tổng {money(order.total)}. Bàn sẽ trở về trạng thái trống.
             </p>
             <Field label="Lý do hủy">
-              <textarea
+              <Textarea
                 name="reason"
                 required
                 maxLength={250}
                 placeholder="Nhập lý do hủy đơn..."
               />
             </Field>
-            <button className="button danger" disabled={action.isPending}>
+            <Button variant="destructive" disabled={action.isPending}>
               Xác nhận hủy đơn
-            </button>
+            </Button>
           </form>
         </Modal>
       )}
@@ -585,16 +653,16 @@ export function Pos() {
             }}
           >
             <Field label="Yêu cầu của khách">
-              <textarea
+              <Textarea
                 name="note"
                 maxLength={250}
                 defaultValue={lineEdit.note}
                 placeholder="Ít đường, ít đá..."
               />
             </Field>
-            <button className="button primary" disabled={action.isPending}>
+            <Button variant="default" disabled={action.isPending}>
               Lưu ghi chú
-            </button>
+            </Button>
           </form>
         </Modal>
       )}
@@ -630,7 +698,8 @@ function MoveModal({
           {tables
             .filter((t) => t.id !== order.tableId && matches(t.name, search))
             .map((t) => (
-              <button
+              <Button
+                variant="ghost"
                 key={t.id}
                 className={`move-table ${t.order ? 'busy' : ''} ${id === t.id ? 'selected' : ''}`}
                 onClick={() => setId(t.id)}
@@ -638,7 +707,7 @@ function MoveModal({
                 <Armchair size={20} />
                 <b>{t.name}</b>
                 <small>{t.order ? money(t.order.total) : 'Bàn trống'}</small>
-              </button>
+              </Button>
             ))}
         </div>
         {target && (
@@ -648,16 +717,17 @@ function MoveModal({
               : `Chuyển toàn bộ đơn sang ${target.name}`}
           </p>
         )}
-        <button
+        <Button
+          variant="default"
           disabled={!id || pending}
-          className="button primary"
+
           onClick={() => {
             if (id) onMove(id).catch(() => {})
           }}
         >
           <ArrowRightLeft size={17} />
           {target?.order ? 'Xác nhận gộp bàn' : 'Xác nhận chuyển bàn'}
-        </button>
+        </Button>
       </div>
     </Modal>
   )
@@ -689,24 +759,28 @@ function PaymentModal({
           <h2>{money(order.total)}</h2>
           <small>Tổng tiền khách cần thanh toán</small>
         </div>
-        <Field label="Phương thức thanh toán">
-          <div className="payment-methods">
+        <div className="space-y-3">
+          <span className="text-sm font-medium" id="payment-method-label">
+            Phương thức thanh toán
+          </span>
+          <RadioGroup
+            value={method}
+            onValueChange={setMethod}
+            aria-labelledby="payment-method-label"
+            className="flex flex-wrap gap-4"
+          >
             {Object.entries(paymentNames).map(([key, name]) => (
-              <button
-                key={key}
-                className={method === key ? 'selected' : ''}
-                type="button"
-                onClick={() => setMethod(key)}
-              >
+              <Label key={key} className="flex items-center gap-2">
+                <RadioGroupItem value={key} />
                 {name}
-              </button>
+              </Label>
             ))}
-          </div>
-        </Field>
+          </RadioGroup>
+        </div>
         {method === 'CASH' ? (
           <>
             <Field label="Tiền khách đưa (đ)">
-              <input
+              <Input
                 type="number"
                 min={order.total}
                 step="1"
@@ -718,9 +792,9 @@ function PaymentModal({
             <div className="cash-presets">
               {[order.total, ...[50000, 100000, 200000, 500000].filter((n) => n > order.total)].map(
                 (n) => (
-                  <button type="button" key={n} onClick={() => setTendered(n)}>
+                  <Button variant="ghost" type="button" key={n} onClick={() => setTendered(n)}>
                     {money(n)}
-                  </button>
+                  </Button>
                 ),
               )}
             </div>
@@ -730,18 +804,19 @@ function PaymentModal({
             </div>
           </>
         ) : (
-          <div className="info-box">
+          <Alert className="info-box">
             Xác nhận đã nhận đủ {money(order.total)} qua {paymentNames[method].toLowerCase()} trước
             khi hoàn tất.
-          </div>
+          </Alert>
         )}
-        <button
-          className="button primary"
+        <Button
+          variant="default"
+
           disabled={pending || (method === 'CASH' && tendered < order.total)}
         >
           <Check size={18} />
           {pending ? 'Đang xử lý...' : 'Xác nhận thanh toán'}
-        </button>
+        </Button>
       </form>
     </Modal>
   )

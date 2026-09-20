@@ -1,3 +1,5 @@
+import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Check, Save, ShieldCheck, Users, UserRoundCog, RotateCcw } from 'lucide-react'
@@ -5,6 +7,9 @@ import { api } from '../models/api'
 import { useAction } from '../viewmodels/data'
 import { useUI } from '../viewmodels/session'
 import { ErrorBox, Loading } from '../components/ui'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 type EditableRole = 'CASHIER' | 'MANAGER'
 interface RoleAccess {
@@ -82,23 +87,32 @@ export function RolePermissions() {
         <div className="panel-title">
           <h2>Vai trò nhân viên</h2>
         </div>
-        {roles.map(({ id, label, description, icon: Icon }) => (
-          <button
-            key={id}
-            className={`role-choice ${role === id ? 'selected' : ''}`}
-            aria-pressed={role === id}
-            disabled={action.isPending}
-            onClick={() => setRole(id)}
-          >
-            <Icon size={24} />
-            <span>
-              <strong>{label}</strong>
-              <small>{description}</small>
-              {drafts[id] && <small className="unsaved-label">Có thay đổi chưa lưu</small>}
-            </span>
-            {role === id && <Check size={20} />}
-          </button>
-        ))}
+        <ToggleGroup
+          type="single"
+          value={role}
+          onValueChange={(value) => {
+            if (value) setRole(value as EditableRole)
+          }}
+          className="w-full flex-col"
+          aria-label="Vai trò nhân viên"
+        >
+          {roles.map(({ id, label, description, icon: Icon }) => (
+            <ToggleGroupItem
+              value={id}
+              key={id}
+              className={`role-choice ${role === id ? 'selected' : ''}`}
+              disabled={action.isPending}
+            >
+              <Icon size={24} />
+              <span>
+                <strong>{label}</strong>
+                <small>{description}</small>
+                {drafts[id] && <small className="unsaved-label">Có thay đổi chưa lưu</small>}
+              </span>
+              {role === id && <Check size={20} />}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
         <div className="admin-access-note">
           <ShieldCheck size={24} />
           <div>
@@ -117,9 +131,9 @@ export function RolePermissions() {
               này.
             </p>
           </div>
-          <span className="badge green">
+          <Badge variant="secondary" className="badge green">
             {selected.length}/{query.data?.permissions.length || 6} chức năng
-          </span>
+          </Badge>
         </div>
         {query.isPending ? (
           <Loading />
@@ -128,34 +142,38 @@ export function RolePermissions() {
         ) : (
           <>
             <div className="permissions-select-all">
-              <label>
-                <input
-                  type="checkbox"
+              <Label>
+                <Checkbox
                   aria-label="Chọn tất cả chức năng"
-                  checked={selected.length === query.data.permissions.length}
+                  checked={
+                    selected.length === query.data.permissions.length
+                      ? true
+                      : selected.length
+                        ? 'indeterminate'
+                        : false
+                  }
                   disabled={action.isPending}
-                  onChange={(e) =>
-                    update(e.target.checked ? query.data.permissions.map((p) => p.id) : [])
+                  onCheckedChange={(checked) =>
+                    update(checked === true ? query.data.permissions.map((p) => p.id) : [])
                   }
                 />
                 <span>Chọn tất cả chức năng</span>
-              </label>
+              </Label>
               <span>{changed ? 'Chưa lưu thay đổi' : 'Đã đồng bộ'}</span>
             </div>
             <div className="permission-options">
               {query.data.permissions.map((permission) => (
-                <label
+                <Label
                   key={permission.id}
                   className={`permission-option ${selected.includes(permission.id) ? 'enabled' : ''}`}
                 >
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     aria-label={permission.label}
                     checked={selected.includes(permission.id)}
                     disabled={action.isPending}
-                    onChange={(e) =>
+                    onCheckedChange={(checked) =>
                       update(
-                        e.target.checked
+                        checked === true
                           ? [...selected, permission.id]
                           : selected.filter((id) => id !== permission.id),
                       )
@@ -165,10 +183,13 @@ export function RolePermissions() {
                     <strong>{permission.label}</strong>
                     <small>{permission.description}</small>
                   </span>
-                  <span className={`badge ${selected.includes(permission.id) ? 'green' : 'gray'}`}>
+                  <Badge
+                    variant="secondary"
+                    className={`badge ${selected.includes(permission.id) ? 'green' : 'gray'}`}
+                  >
                     {selected.includes(permission.id) ? 'Cho phép' : 'Không cấp'}
-                  </span>
-                </label>
+                  </Badge>
+                </Label>
               ))}
             </div>
             <div className="role-save-footer">
@@ -177,22 +198,14 @@ export function RolePermissions() {
                 của vai trò đang chọn.
               </p>
               <div>
-                <button
-                  className="button secondary"
-                  disabled={!changed || action.isPending}
-                  onClick={reset}
-                >
+                <Button variant="outline" disabled={!changed || action.isPending} onClick={reset}>
                   <RotateCcw size={18} />
                   Bỏ thay đổi
-                </button>
-                <button
-                  className="button primary"
-                  disabled={!changed || action.isPending}
-                  onClick={save}
-                >
+                </Button>
+                <Button disabled={!changed || action.isPending} onClick={save}>
                   <Save size={18} />
                   {action.isPending ? 'Đang lưu...' : 'Lưu phân quyền'}
-                </button>
+                </Button>
               </div>
             </div>
           </>
